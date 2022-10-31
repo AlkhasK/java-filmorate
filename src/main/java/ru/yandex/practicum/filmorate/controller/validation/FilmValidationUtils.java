@@ -5,20 +5,10 @@ import java.time.LocalDate;
 
 public class FilmValidationUtils {
 
-    private static final int MAX_DESCRIPTION_LENGTH = 200;
-
     private static final LocalDate MIN_RELEASE_DATE = LocalDate.of(1895, 12, 28);
 
     private FilmValidationUtils() {
 
-    }
-
-    public static boolean isNameValid(String name) {
-        return !name.isBlank();
-    }
-
-    public static boolean isDescriptionValid(String description) {
-        return description.length() <= MAX_DESCRIPTION_LENGTH;
     }
 
     public static boolean isReleaseDateValid(LocalDate releaseDate) {

@@ -7,6 +7,7 @@ import ru.yandex.practicum.filmorate.controller.exception.ValidationException;
 import ru.yandex.practicum.filmorate.controller.validation.FilmValidationUtils;
 import ru.yandex.practicum.filmorate.model.Film;
 
+import javax.validation.Valid;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,7 +28,7 @@ public class FilmController {
     }
 
     @PutMapping
-    public Film update(@RequestBody Film film) {
+    public Film update(@Valid @RequestBody Film film) {
         log.info("Update film : {}", film);
         validateForUpdate(film);
         films.put(film.getId(), film);
@@ -35,7 +36,7 @@ public class FilmController {
     }
 
     @PostMapping
-    public Film create(@RequestBody Film film) {
+    public Film create(@Valid @RequestBody Film film) {
         log.info("Create film : {}", film);
         validate(film);
         film.setId(id++);
@@ -44,14 +45,6 @@ public class FilmController {
     }
 
     private void validate(Film film) {
-        if (!FilmValidationUtils.isNameValid(film.getName())) {
-            log.warn("Invalid field name: {}", film.getName());
-            throw new ValidationException("Object Film has invalid name: " + film.getName());
-        }
-        if (!FilmValidationUtils.isDescriptionValid(film.getDescription())) {
-            log.warn("Invalid field description: {}", film.getDescription());
-            throw new ValidationException("Object Film has invalid description: " + film.getDescription());
-        }
         if (!FilmValidationUtils.isReleaseDateValid(film.getReleaseDate())) {
             log.warn("Invalid field release date: {}", film.getReleaseDate());
             throw new ValidationException("Object Film has invalid release date: " + film.getReleaseDate());

@@ -1,35 +1,40 @@
 package ru.yandex.practicum.filmorate.model;
 
-import lombok.Data;
-import lombok.NonNull;
+import lombok.Getter;
+import lombok.Setter;
 
+import javax.validation.constraints.*;
 import java.time.LocalDate;
 
-@Data
+@Getter
+@Setter
 public class User {
 
     private Integer id;
-    @NonNull
+    @NotNull
+    @Email
     private String email;
-    @NonNull
+    @NotBlank
+    @Pattern(regexp = "^[\\S]*$")
     private String login;
     private String name;
-    @NonNull
+    @NotNull
+    @PastOrPresent
     private LocalDate birthday;
 
     public User() {
     }
 
     public User(String email, String login, String name, LocalDate birthday) {
-        setEmail(email);
-        setLogin(login);
-        setName(name);
-        setBirthday(birthday);
+        this.email = email;
+        this.login = login;
+        this.name = name;
+        this.birthday = birthday;
     }
 
     public User(String email, String login, LocalDate birthday) {
-        setEmail(email);
-        setLogin(login);
-        setBirthday(birthday);
+        this.email = email;
+        this.login = login;
+        this.birthday = birthday;
     }
 }
