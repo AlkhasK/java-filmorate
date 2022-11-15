@@ -11,6 +11,7 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -28,4 +29,5 @@ public class Film {
     @NotNull
     @JsonSerialize(using = DurationSerializer.class)
     private Duration duration;
+    private Set<Integer> likes;
 }

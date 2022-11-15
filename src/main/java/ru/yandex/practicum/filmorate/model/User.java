@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 
 import javax.validation.constraints.*;
 import java.time.LocalDate;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -23,4 +24,5 @@ public class User {
     @NotNull
     @PastOrPresent
     private LocalDate birthday;
+    private Set<Integer> friends;
 }

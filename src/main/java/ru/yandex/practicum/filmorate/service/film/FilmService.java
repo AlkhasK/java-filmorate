@@ -6,9 +6,12 @@ import ru.yandex.practicum.filmorate.controller.exception.EntityNotFoundExceptio
 import ru.yandex.practicum.filmorate.controller.exception.ValidationException;
 import ru.yandex.practicum.filmorate.controller.validation.FilmValidationUtils;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.service.user.UserService;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -16,8 +19,11 @@ public class FilmService {
 
     private final FilmStorage filmStorage;
 
-    public FilmService(FilmStorage filmStorage) {
+    private final UserService userService;
+
+    public FilmService(FilmStorage filmStorage, UserService userService) {
         this.filmStorage = filmStorage;
+        this.userService = userService;
     }
 
     public List<Film> findAll() {
@@ -58,5 +64,59 @@ public class FilmService {
     private boolean isEntityExists(Film film) {
         return filmStorage.findAll().stream()
                 .anyMatch(f -> f.getId().equals(film.getId()));
+    }
+
+    private void initLikes(Film film) {
+        if (film.getLikes() == null) {
+            film.setLikes(new HashSet<>());
+        }
+    }
+
+    private void addLike(Film film, User user) {
+        Integer userId = user.getId();
+        initLikes(film);
+        film.getLikes().add(userId);
+        filmStorage.update(film);
+    }
+
+    public void addLike(int filmId, int userId) {
+        log.info("Add like user id: {} to film id: {}", userId, filmId);
+        Film film = getFilm(filmId);
+        User user = userService.getUser(userId);
+        addLike(film, user);
+    }
+
+    public Film getFilm(int filmId) {
+        List<Film> films = filmStorage.findAll();
+        log.info("Get film by id: {}", filmId);
+        Film film = films.stream().filter(u -> u.getId().equals(filmId)).findFirst().orElse(null);
+        if (film == null) {
+            log.warn("Film id: {} doesn't exists", filmId);
+            throw new EntityNotFoundException("No film entity with id: " + filmId);
+        }
+        return film;
+    }
+
+    private void deleteLike(Film film, User user) {
+        Integer userId = user.getId();
+        initLikes(film);
+        film.getLikes().remove(userId);
+        filmStorage.update(film);
+    }
+
+    public void deleteLike(int filmId, int userId) {
+        log.info("Remove like user id: {} from film id : {}", userId, filmId);
+        Film film = getFilm(filmId);
+        User user = userService.getUser(userId);
+        deleteLike(film, user);
+    }
+
+    public List<Film> getPopularFilms(int count) {
+        List<Film> films = filmStorage.findAll();
+        return films.stream()
+                .sorted(Comparator.comparing((Film f) ->
+                        Optional.ofNullable(f.getLikes()).orElse(Collections.emptySet()).size()).reversed())
+                .limit(count)
+                .collect(Collectors.toList());
     }
 }
