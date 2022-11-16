@@ -13,4 +13,6 @@ public interface FilmStorage {
     Film delete(Integer id);
 
     List<Film> findAll();
+
+    Film getById(Integer id);
 }

@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.service.film;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.controller.exception.EntityNotFoundException;
 import ru.yandex.practicum.filmorate.controller.exception.ValidationException;
@@ -21,6 +22,7 @@ public class FilmService {
 
     private final UserService userService;
 
+    @Autowired
     public FilmService(FilmStorage filmStorage, UserService userService) {
         this.filmStorage = filmStorage;
         this.userService = userService;
@@ -62,8 +64,7 @@ public class FilmService {
     }
 
     private boolean isEntityExists(Film film) {
-        return filmStorage.findAll().stream()
-                .anyMatch(f -> f.getId().equals(film.getId()));
+        return filmStorage.getById(film.getId()) != null;
     }
 
     private void initLikes(Film film) {
@@ -87,9 +88,8 @@ public class FilmService {
     }
 
     public Film getFilm(int filmId) {
-        List<Film> films = filmStorage.findAll();
         log.info("Get film by id: {}", filmId);
-        Film film = films.stream().filter(u -> u.getId().equals(filmId)).findFirst().orElse(null);
+        Film film = filmStorage.getById(filmId);
         if (film == null) {
             log.warn("Film id: {} doesn't exists", filmId);
             throw new EntityNotFoundException("No film entity with id: " + filmId);

@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.service.user;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.controller.exception.EntityNotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
@@ -9,6 +10,7 @@ import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -17,6 +19,7 @@ public class UserService {
 
     private final UserStorage userStorage;
 
+    @Autowired
     public UserService(UserStorage userStorage) {
         this.userStorage = userStorage;
     }
@@ -46,8 +49,7 @@ public class UserService {
     }
 
     private boolean isEntityExists(User user) {
-        return userStorage.findAll().stream()
-                .anyMatch(u -> u.getId().equals(user.getId()));
+        return userStorage.getById(user.getId()) != null;
     }
 
     private void setNameIfEmpty(User user) {
@@ -84,9 +86,8 @@ public class UserService {
     }
 
     public User getUser(int userId) {
-        List<User> users = userStorage.findAll();
         log.info("Get user by id: {}", userId);
-        User user = users.stream().filter(u -> u.getId().equals(userId)).findFirst().orElse(null);
+        User user = userStorage.getById(userId);
         if (user == null) {
             log.warn("User id: {} doesn't exists", userId);
             throw new EntityNotFoundException("No user entity with id: " + userId);
@@ -115,10 +116,7 @@ public class UserService {
     }
 
     private List<User> getFriends(User user) {
-        if (user.getFriends() == null) {
-            return Collections.emptyList();
-        }
-        return user.getFriends().stream()
+        return Optional.ofNullable(user.getFriends()).orElse(Collections.emptySet()).stream()
                 .map(this::getUser)
                 .collect(Collectors.toList());
     }

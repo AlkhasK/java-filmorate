@@ -34,4 +34,7 @@ public class InMemoryFilmStorage implements FilmStorage {
         return null;
     }
 
+    public Film getById(Integer id) {
+        return films.get(id);
+    }
 }
