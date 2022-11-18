@@ -28,13 +28,13 @@ public class UserController {
 
     @PutMapping
     public User update(@Valid @RequestBody User user) {
-        log.info("Update user : {}", user);
+        log.info("PUT: update user : {}", user);
         return userService.update(user);
     }
 
     @PostMapping
     public User create(@Valid @RequestBody User user) {
-        log.info("Create user : {}", user);
+        log.info("POST: create user : {}", user);
         return userService.create(user);
     }
 
@@ -45,13 +45,13 @@ public class UserController {
 
     @PutMapping("/{id}/friends/{friendId}")
     public void addFriend(@PathVariable int id, @PathVariable int friendId) {
-        log.info("Add friend id : {} to user id {}", friendId, id);
+        log.info("PUT: add friend id : {} to user id {}", friendId, id);
         userService.addFriend(id, friendId);
     }
 
     @DeleteMapping("/{id}/friends/{friendId}")
     public void deleteFriend(@PathVariable int id, @PathVariable int friendId) {
-        log.info("Delete friend id : {} from user id {}", friendId, id);
+        log.info("DELETE: remove friend id : {} from user id {}", friendId, id);
         userService.deleteFriend(id, friendId);
     }
 
