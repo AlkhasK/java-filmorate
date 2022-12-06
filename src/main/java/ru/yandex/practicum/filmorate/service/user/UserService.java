@@ -1,8 +1,10 @@
 package ru.yandex.practicum.filmorate.service.user;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.controller.exception.EntityNotFoundException;
+import ru.yandex.practicum.filmorate.controller.exception.FriendConfirmationException;
 import ru.yandex.practicum.filmorate.model.Friend;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.validate.ValidateUserService;
@@ -11,19 +13,17 @@ import ru.yandex.practicum.filmorate.storage.user.friend.FriendStorage;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class UserService {
 
     private final UserStorage userStorage;
-
     private final ValidateUserService validateUserService;
-
     private final FriendStorage friendStorage;
 
     @Autowired
-    public UserService(UserStorage userStorage, ValidateUserService validateUserService, FriendStorage friendStorage) {
+    public UserService(@Qualifier("UserDbStorage") UserStorage userStorage, ValidateUserService validateUserService,
+                       @Qualifier("FriendDbStorage") FriendStorage friendStorage) {
         this.userStorage = userStorage;
         this.validateUserService = validateUserService;
         this.friendStorage = friendStorage;
@@ -52,11 +52,11 @@ public class UserService {
     }
 
     public User getUser(int userId) {
-        User user = userStorage.getById(userId);
-        if (user == null) {
+        Optional<User> user = userStorage.findById(userId);
+        if (user.isEmpty()) {
             throw new EntityNotFoundException("No user entity with id: " + userId);
         }
-        return user;
+        return user.get();
     }
 
     public void addFriend(int userId, int friendId) {
@@ -66,40 +66,54 @@ public class UserService {
         if (!validateUserService.isEntityExists(friendId)) {
             throw new EntityNotFoundException("No user entity with id: " + friendId);
         }
-        Friend friendUserWithFriend = new Friend(userId, friendId);
-        Friend friendFriendWithUser = new Friend(friendId, userId);
-        friendStorage.add(friendUserWithFriend);
-        friendStorage.add(friendFriendWithUser);
+        Optional<Friend> friend = friendStorage.findById(friendId, userId);
+        if (friend.isPresent()) {
+            confirmFriend(friend.get());
+            return;
+        }
+        Friend newFriend = new Friend(userId, friendId, false);
+        friendStorage.create(newFriend);
+    }
+
+    private void confirmFriend(Friend friend) {
+        if (friend.getConfirmed()) {
+            throw new FriendConfirmationException(
+                    String.format("Friendship for user id : %s other user id: %s already confirmed",
+                            friend.getUserId(), friend.getFriendId()));
+        }
+        friend.setConfirmed(true);
+        friendStorage.update(friend);
     }
 
     public void deleteFriend(int userId, int friendId) {
-        Optional<Friend> friendUserWithFriend = friendStorage.get(userId, friendId);
-        if (friendUserWithFriend.isEmpty()) {
-            throw new EntityNotFoundException(String.format("No friend entity with userId : %s and friendId : %s",
-                    userId, friendId));
+        Optional<Friend> friendUserWithFriend = friendStorage.findById(userId, friendId);
+        if (friendUserWithFriend.isPresent()) {
+            friendStorage.delete(userId, friendId);
+            return;
         }
-        Optional<Friend> friendFriendWithUser = friendStorage.get(friendId, userId);
-        if (friendFriendWithUser.isEmpty()) {
-            throw new EntityNotFoundException(String.format("No friend entity with userId : %s and friendId : %s",
-                    friendId, userId));
+        Optional<Friend> friendFriendWithUser = friendStorage.findById(friendId, userId);
+        if (friendFriendWithUser.isPresent()) {
+            friendStorage.delete(friendId, userId);
+            return;
         }
-        friendStorage.delete(friendUserWithFriend.get());
-        friendStorage.delete(friendFriendWithUser.get());
+        throw new EntityNotFoundException(String.format("No friend entity with user id : %s and other user id : %s",
+                userId, friendId));
     }
 
     public List<User> getFriends(int userId) {
         User user = getUser(userId);
-        List<Friend> friends = friendStorage.findAll(user);
-        return friends.stream()
-                .map(f -> userStorage.getById(f.getFriendId()))
-                .collect(Collectors.toList());
+        return userStorage.findFriends(user);
     }
 
     public List<User> getCommonFriends(int userId, int otherUserId) {
-        List<User> userFriends = getFriends(userId);
-        List<User> otherUserFriends = getFriends(otherUserId);
-        return userFriends.stream()
-                .filter(otherUserFriends::contains)
-                .collect(Collectors.toList());
+        Optional<User> user = userStorage.findById(userId);
+        if (user.isEmpty()) {
+            throw new EntityNotFoundException("No user entity with id: " + userId);
+        }
+        Optional<User> otherUser = userStorage.findById(otherUserId);
+        if (otherUser.isEmpty()) {
+            throw new EntityNotFoundException("No user entity with id: " + otherUserId);
+        }
+        return userStorage.commonFriends(user.get(), otherUser.get());
     }
 }

@@ -9,10 +9,12 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.List;
 
 @Getter
 @Setter
 @NoArgsConstructor
+@Builder
 @AllArgsConstructor
 @EqualsAndHashCode
 public class Film {
@@ -28,5 +30,6 @@ public class Film {
     @NotNull
     @JsonSerialize(using = DurationSerializer.class)
     private Duration duration;
-
+    private List<Genre> genres;
+    private MPA mpa;
 }

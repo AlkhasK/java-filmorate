@@ -1,16 +1,19 @@
 package ru.yandex.practicum.filmorate.service.film;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.controller.exception.EntityNotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.Like;
 import ru.yandex.practicum.filmorate.service.validate.ValidateFilmService;
 import ru.yandex.practicum.filmorate.service.validate.ValidateUserService;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.film.like.LikeStorage;
 
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,7 +28,8 @@ public class FilmService {
     private final ValidateUserService validateUserService;
 
     @Autowired
-    public FilmService(FilmStorage filmStorage, LikeStorage likeStorage,
+    public FilmService(@Qualifier("FilmDbStorage") FilmStorage filmStorage,
+                       @Qualifier("LikeDbStorage") LikeStorage likeStorage,
                        ValidateFilmService validateFilmService, ValidateUserService validateUserService) {
         this.filmStorage = filmStorage;
         this.likeStorage = likeStorage;
@@ -39,20 +43,30 @@ public class FilmService {
 
     public Film update(Film film) {
         validateFilmService.validateForUpdate(film);
+        removeGenreDuplicate(film);
         return filmStorage.update(film);
+    }
+
+    private void removeGenreDuplicate(Film film) {
+        List<Genre> genres = film.getGenres();
+        if (genres != null) {
+            genres = genres.stream().distinct().collect(Collectors.toList());
+            film.setGenres(genres);
+        }
     }
 
     public Film create(Film film) {
         validateFilmService.validate(film);
+        removeGenreDuplicate(film);
         return filmStorage.create(film);
     }
 
     public Film getFilm(int filmId) {
-        Film film = filmStorage.getById(filmId);
-        if (film == null) {
+        Optional<Film> film = filmStorage.findById(filmId);
+        if (film.isEmpty()) {
             throw new EntityNotFoundException("No film entity with id: " + filmId);
         }
-        return film;
+        return film.get();
     }
 
     public void addLike(int filmId, int userId) {
@@ -63,11 +77,11 @@ public class FilmService {
             throw new EntityNotFoundException("No user entity with id: " + userId);
         }
         Like like = new Like(filmId, userId);
-        likeStorage.add(like);
+        likeStorage.create(like);
     }
 
     public void deleteLike(int filmId, int userId) {
-        Optional<Like> like = likeStorage.getById(filmId, userId);
+        Optional<Like> like = likeStorage.findById(filmId, userId);
         if (like.isEmpty()) {
             throw new EntityNotFoundException(String.format("No like entity with filmId : %s and userId : %s",
                     filmId, userId));
@@ -76,39 +90,6 @@ public class FilmService {
     }
 
     public List<Film> getPopularFilms(int count) {
-        List<Film> allFilms = filmStorage.findAll();
-        Map<Integer, Set<Like>> likes = likeStorage.findAll().stream()
-                .collect(Collectors.groupingBy(Like::getFilmId, Collectors.toSet()));
-        List<Integer> sortedByLikeFilmIds = getSortedByLikesFilmsIds(likes);
-        List<Film> filmsWithoutLikes = getFilmsWithoutLikes(sortedByLikeFilmIds, allFilms);
-        List<Film> sortedByLikeFilm = mapFilmIdToFilm(sortedByLikeFilmIds, allFilms);
-        sortedByLikeFilm.addAll(filmsWithoutLikes);
-        return sortedByLikeFilm.stream()
-                .limit(count)
-                .collect(Collectors.toList());
-    }
-
-    private List<Integer> getSortedByLikesFilmsIds(Map<Integer, Set<Like>> likes) {
-        return likes.entrySet().stream()
-                .sorted(Comparator.comparing((Map.Entry<Integer, Set<Like>> me) ->
-                                Optional.ofNullable(me.getValue()).orElse(Collections.emptySet()).size())
-                        .reversed())
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
-    }
-
-    private List<Film> getFilmsWithoutLikes(List<Integer> sortedByLikeFilmIds, List<Film> allFilms) {
-        return allFilms.stream()
-                .filter(f -> !sortedByLikeFilmIds.contains(f.getId()))
-                .collect(Collectors.toList());
-    }
-
-    private List<Film> mapFilmIdToFilm(List<Integer> sortedByLikeFilmIds, List<Film> allFilms) {
-        return sortedByLikeFilmIds.stream()
-                .map(filmId -> allFilms.stream()
-                        .filter(f -> f.getId().equals(filmId))
-                        .findFirst()
-                        .orElse(null))
-                .collect(Collectors.toList());
+        return filmStorage.popularFilms(count);
     }
 }

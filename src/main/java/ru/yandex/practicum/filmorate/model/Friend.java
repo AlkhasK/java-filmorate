@@ -15,5 +15,8 @@ public class Friend {
     Integer userId;
     @NotNull
     Integer friendId;
+    @NotNull
+    @EqualsAndHashCode.Exclude
+    Boolean confirmed;
 
 }

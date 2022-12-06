@@ -1,7 +1,6 @@
 package ru.yandex.practicum.filmorate.storage.film.like;
 
 import org.springframework.stereotype.Component;
-import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Like;
 
 import java.util.*;
@@ -13,11 +12,12 @@ public class InMemoryLikeStorage implements LikeStorage {
     private final Map<Integer, Set<Like>> storage = new HashMap<>();
 
     @Override
-    public void add(Like like) {
+    public Like create(Like like) {
         Integer filmId = like.getFilmId();
         Set<Like> likes = Optional.ofNullable(storage.get(filmId)).orElse(new HashSet<>());
         likes.add(like);
         storage.put(filmId, likes);
+        return like;
     }
 
     @Override
@@ -31,8 +31,7 @@ public class InMemoryLikeStorage implements LikeStorage {
     }
 
     @Override
-    public List<Like> find(Film film) {
-        Integer filmId = film.getId();
+    public List<Like> findByFilmId(int filmId) {
         Set<Like> likes = Optional.ofNullable(storage.get(filmId)).orElse(new HashSet<>());
         return new ArrayList<>(likes);
     }
@@ -45,7 +44,7 @@ public class InMemoryLikeStorage implements LikeStorage {
     }
 
     @Override
-    public Optional<Like> getById(Integer filmId, Integer userId) {
+    public Optional<Like> findById(Integer filmId, Integer userId) {
         Optional<Set<Like>> likes = Optional.ofNullable(storage.get(filmId));
         return likes.orElse(Collections.emptySet()).stream()
                 .filter(l -> l.getUserId().equals(userId))

@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.service.validate;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.controller.exception.EntityNotFoundException;
 import ru.yandex.practicum.filmorate.controller.exception.ValidationException;
@@ -14,7 +15,7 @@ public class ValidateFilmService {
     private final FilmStorage filmStorage;
 
     @Autowired
-    public ValidateFilmService(FilmStorage filmStorage) {
+    public ValidateFilmService(@Qualifier("FilmDbStorage") FilmStorage filmStorage) {
         this.filmStorage = filmStorage;
     }
 
@@ -35,10 +36,10 @@ public class ValidateFilmService {
     }
 
     public boolean isEntityExists(Film film) {
-        return filmStorage.getById(film.getId()) != null;
+        return filmStorage.findById(film.getId()).isPresent();
     }
 
     public boolean isEntityExists(int filmId) {
-        return filmStorage.getById(filmId) != null;
+        return filmStorage.findById(filmId).isPresent();
     }
 }
