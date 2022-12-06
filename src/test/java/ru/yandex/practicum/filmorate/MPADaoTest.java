@@ -1,6 +1,5 @@
 package ru.yandex.practicum.filmorate;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import ru.yandex.practicum.filmorate.model.MPA;
@@ -17,28 +16,11 @@ public class MPADaoTest extends AbstractDaoTest {
     @Autowired
     private MPAStorage mpaStorage;
 
-    private MPA mpaForTest;
-
-    @BeforeEach
-    public void createMPAForTest() {
-        mpaForTest = new MPA();
-        mpaForTest.setName("D");
-    }
-
-    @Test
-    void createMPA() {
-        mpaForTest = mpaStorage.create(mpaForTest);
-
-        Optional<MPA> createdMPA = mpaStorage.findById(mpaForTest.getId());
-        assertTrue(createdMPA.isPresent());
-        assertEquals(mpaForTest, createdMPA.get());
-    }
-
     @Test
     void updateMPA() {
-        mpaForTest = mpaStorage.create(mpaForTest);
+        MPA mpaForTest = new MPA(1, "G");
 
-        mpaForTest.setName("G");
+        mpaForTest.setName("NEW");
         mpaForTest = mpaStorage.update(mpaForTest);
 
         Optional<MPA> updatedMPA = mpaStorage.findById(mpaForTest.getId());
@@ -48,7 +30,7 @@ public class MPADaoTest extends AbstractDaoTest {
 
     @Test
     void deleteMPA() {
-        mpaForTest = mpaStorage.create(mpaForTest);
+        MPA mpaForTest = new MPA(1, "G");
 
         mpaStorage.delete(mpaForTest.getId());
 
@@ -71,7 +53,7 @@ public class MPADaoTest extends AbstractDaoTest {
 
     @Test
     void findByIdMPA() {
-        mpaForTest = mpaStorage.create(mpaForTest);
+        MPA mpaForTest = new MPA(1, "G");
 
         Optional<MPA> createdMPA = mpaStorage.findById(mpaForTest.getId());
         assertTrue(createdMPA.isPresent());

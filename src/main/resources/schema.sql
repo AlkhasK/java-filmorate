@@ -1,20 +1,20 @@
-create table MPA
+create table if not exists MPA
 (
     MPA_ID   INTEGER auto_increment,
-    MPA_NAME CHARACTER VARYING(10) not null,
+    MPA_NAME CHARACTER VARYING(20) not null,
     constraint "MPA_pk"
         primary key (MPA_ID)
 );
 
-create table GENRES
+create table if not exists GENRES
 (
     GENRE_ID   INTEGER auto_increment,
-    GENRE_NAME CHARACTER VARYING(20) not null,
+    GENRE_NAME CHARACTER VARYING(30) not null,
     constraint "GENRES_pk"
         primary key (GENRE_ID)
 );
 
-create table FILMS
+create table if not exists FILMS
 (
     FILM_ID           INTEGER auto_increment,
     FILM_NAME         CHARACTER VARYING(30)  not null,
@@ -28,7 +28,7 @@ create table FILMS
         foreign key (FILM_MPA) references MPA
 );
 
-create table FILM_GENRES
+create table if not exists FILM_GENRES
 (
     FILM_ID  INTEGER,
     GENRE_ID INTEGER,
@@ -67,7 +67,7 @@ create table if not exists LIKES
             on delete cascade
 );
 
-create table FRIENDS
+create table if not exists FRIENDS
 (
     USER_ID      INTEGER not null,
     FRIEND_ID    INTEGER not null,

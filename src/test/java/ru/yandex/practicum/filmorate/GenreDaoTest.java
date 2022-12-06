@@ -1,6 +1,5 @@
 package ru.yandex.practicum.filmorate;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.jdbc.Sql;
@@ -18,17 +17,9 @@ public class GenreDaoTest extends AbstractDaoTest {
     @Autowired
     private GenreStorage genreStorage;
 
-    private Genre genreForTest;
-
-    @BeforeEach
-    public void createGenreForTest() {
-        genreForTest = new Genre();
-        genreForTest.setName("Sad film");
-    }
-
     @Test
     void createGenre() {
-        genreForTest = genreStorage.create(genreForTest);
+        Genre genreForTest = new Genre(1, "Комедия");
 
         Optional<Genre> createdGenre = genreStorage.findById(genreForTest.getId());
         assertTrue(createdGenre.isPresent());
@@ -37,7 +28,7 @@ public class GenreDaoTest extends AbstractDaoTest {
 
     @Test
     void updateGenre() {
-        genreForTest = genreStorage.create(genreForTest);
+        Genre genreForTest = new Genre(1, "Комедия");
 
         genreForTest.setName("Updated");
         genreForTest = genreStorage.update(genreForTest);
@@ -49,7 +40,7 @@ public class GenreDaoTest extends AbstractDaoTest {
 
     @Test
     void deleteGenre() {
-        genreForTest = genreStorage.create(genreForTest);
+        Genre genreForTest = new Genre(1, "Комедия");
 
         genreStorage.delete(genreForTest.getId());
 
@@ -73,7 +64,7 @@ public class GenreDaoTest extends AbstractDaoTest {
 
     @Test
     void findByIdGenre() {
-        genreForTest = genreStorage.create(genreForTest);
+        Genre genreForTest = new Genre(1, "Комедия");
 
         Optional<Genre> createdGenre = genreStorage.findById(genreForTest.getId());
         assertTrue(createdGenre.isPresent());
