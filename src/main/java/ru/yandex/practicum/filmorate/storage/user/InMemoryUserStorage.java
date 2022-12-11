@@ -8,9 +8,8 @@ import java.util.*;
 @Component
 public class InMemoryUserStorage implements UserStorage {
 
-    private int id = 1;
-
     private final Map<Integer, User> users = new HashMap<>();
+    private int id = 1;
 
     public List<User> findAll() {
         return new ArrayList<>(users.values());

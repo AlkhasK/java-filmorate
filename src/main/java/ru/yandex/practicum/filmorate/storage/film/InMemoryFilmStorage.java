@@ -8,9 +8,8 @@ import java.util.*;
 @Component
 public class InMemoryFilmStorage implements FilmStorage {
 
-    private int id = 1;
-
     private final Map<Integer, Film> films = new HashMap<>();
+    private int id = 1;
 
     public List<Film> findAll() {
         return new ArrayList<>(films.values());

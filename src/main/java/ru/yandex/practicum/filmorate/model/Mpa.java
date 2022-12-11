@@ -9,11 +9,11 @@ import javax.validation.constraints.NotNull;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode
-public class MPA {
+public class Mpa {
 
     @NotNull
-    Integer id;
+    private Integer id;
     @EqualsAndHashCode.Exclude
-    String name;
+    private String name;
 
 }

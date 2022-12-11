@@ -10,17 +10,19 @@ import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.controller.exception.EntityNotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
-import ru.yandex.practicum.filmorate.model.MPA;
+import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.storage.film.genre.FilmGenreStorage;
 import ru.yandex.practicum.filmorate.storage.film.genre.GenreStorage;
-import ru.yandex.practicum.filmorate.storage.film.mpa.MPAStorage;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.AbstractMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Repository
 @Qualifier("FilmDbStorage")
@@ -28,21 +30,18 @@ public class FilmDbStorage implements FilmStorage {
 
     private final JdbcTemplate jdbcTemplate;
     private final FilmGenreStorage filmGenreStorage;
-    private final MPAStorage mpaStorage;
     private final GenreStorage genreStorage;
 
     @Autowired
-    public FilmDbStorage(JdbcTemplate jdbcTemplate, FilmGenreStorage filmGenreStorage,
-                         MPAStorage mpaStorage, GenreStorage genreStorage) {
+    public FilmDbStorage(JdbcTemplate jdbcTemplate, FilmGenreStorage filmGenreStorage, GenreStorage genreStorage) {
         this.jdbcTemplate = jdbcTemplate;
         this.filmGenreStorage = filmGenreStorage;
-        this.mpaStorage = mpaStorage;
         this.genreStorage = genreStorage;
     }
 
     @Override
     public Film create(Film film) {
-        MPA filmMPA = film.getMpa();
+        Mpa filmMPA = film.getMpa();
         SqlParameterSource namedParameters = new MapSqlParameterSource()
                 .addValue("FILM_NAME", film.getName())
                 .addValue("FILM_DESCRIPTION", film.getDescription())
@@ -55,17 +54,22 @@ public class FilmDbStorage implements FilmStorage {
         int filmId = simpleJdbcInsert.executeAndReturnKey(namedParameters).intValue();
         film.setId(filmId);
         if (film.getGenres() != null) {
-            film.getGenres().stream()
-                    .map(Genre::getId)
-                    .forEach(genreId -> filmGenreStorage.create(filmId, genreId));
+            createGenres(film);
         }
         return film;
     }
 
+    private void createGenres(Film film) {
+        List<Map.Entry<Integer, Integer>> filmGenreEntries = film.getGenres().stream()
+                .map(genre -> new AbstractMap.SimpleEntry<>(film.getId(), genre.getId()))
+                .distinct()
+                .collect(Collectors.toList());
+        filmGenreStorage.createBatch(filmGenreEntries);
+    }
 
     @Override
     public Film update(Film film) {
-        MPA filmMPA = film.getMpa();
+        Mpa filmMPA = film.getMpa();
         String sql = "update FILMS set FILM_NAME = ?, FILM_DESCRIPTION = ?, FILM_RELEASE_DATE = ?, " +
                 "FILM_DURATION = ?, FILM_MPA = ? where FILM_ID = ?";
         int rowsAffected = jdbcTemplate.update(sql, film.getName(), film.getDescription(),
@@ -75,10 +79,7 @@ public class FilmDbStorage implements FilmStorage {
         }
         filmGenreStorage.delete(film.getId());
         if (film.getGenres() != null) {
-            film.getGenres().stream()
-                    .map(Genre::getId)
-                    .distinct()
-                    .forEach(genreId -> filmGenreStorage.create(film.getId(), genreId));
+            createGenres(film);
         }
         return film;
     }
@@ -95,8 +96,8 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public List<Film> findAll() {
-        String sql = "select FILM_ID, FILM_NAME, FILM_DESCRIPTION, FILM_RELEASE_DATE, FILM_DURATION, " +
-                "FILM_MPA from FILMS";
+        String sql = "select f.FILM_ID, f.FILM_NAME, f.FILM_DESCRIPTION, f.FILM_RELEASE_DATE, " +
+                "f.FILM_DURATION, f.FILM_MPA, m.MPA_NAME from FILMS f left join MPA m on f.FILM_MPA = m.MPA_ID";
         return jdbcTemplate.query(sql, this::mapRowToFilm);
     }
 
@@ -107,10 +108,8 @@ public class FilmDbStorage implements FilmStorage {
         LocalDate filmReleaseDate = rs.getObject("FILM_RELEASE_DATE", LocalDate.class);
         Duration filmDuration = Duration.ofSeconds(rs.getLong("FILM_DURATION"));
         int filmMpaId = rs.getInt("FILM_MPA");
-        Optional<MPA> filmMpa = mpaStorage.findById(filmMpaId);
-        if (filmMpa.isEmpty()) {
-            throw new EntityNotFoundException("No MPA entity with id: " + filmMpaId);
-        }
+        String mpaName = rs.getString("MPA_NAME");
+        Mpa mpa = (filmMpaId == 0) ? null : new Mpa(filmMpaId, mpaName);
         List<Genre> filmGenres = genreStorage.findByFilmId(filmId);
         return Film.builder()
                 .id(filmId)
@@ -118,14 +117,14 @@ public class FilmDbStorage implements FilmStorage {
                 .description(filmDescr)
                 .releaseDate(filmReleaseDate)
                 .duration(filmDuration)
-                .mpa(filmMpa.get())
+                .mpa(mpa)
                 .genres(filmGenres).build();
     }
 
     @Override
     public Optional<Film> findById(int id) {
-        String sql = "select FILM_ID, FILM_NAME, FILM_DESCRIPTION, FILM_RELEASE_DATE, FILM_DURATION, " +
-                "FILM_MPA from FILMS where FILM_ID = ?";
+        String sql = "select f.FILM_ID, f.FILM_NAME, f.FILM_DESCRIPTION, f.FILM_RELEASE_DATE, f.FILM_DURATION, " +
+                "f.FILM_MPA, m.MPA_NAME from FILMS f left join MPA m on f.FILM_MPA = m.MPA_ID  where f.FILM_ID = ?";
         return jdbcTemplate.query(sql, this::mapRowToFilm, id).stream()
                 .findFirst();
     }
@@ -133,7 +132,8 @@ public class FilmDbStorage implements FilmStorage {
     @Override
     public List<Film> popularFilms(int count) {
         String sql = "select f.FILM_ID, f.FILM_NAME, f.FILM_DESCRIPTION, f.FILM_RELEASE_DATE, " +
-                "f.FILM_DURATION, f.FILM_MPA from FILMS f " +
+                "f.FILM_DURATION, f.FILM_MPA, m.MPA_NAME from FILMS f " +
+                "left join MPA m on f.FILM_MPA = m.MPA_ID " +
                 "left join LIKES l on f.FILM_ID = l.FILM_ID " +
                 "group by f.FILM_ID order by count(l.USER_ID) desc limit ?";
         return jdbcTemplate.query(sql, this::mapRowToFilm, count);

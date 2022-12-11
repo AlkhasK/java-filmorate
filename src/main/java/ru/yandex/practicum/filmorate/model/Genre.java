@@ -12,8 +12,8 @@ import javax.validation.constraints.NotNull;
 public class Genre {
 
     @NotNull
-    Integer id;
+    private Integer id;
     @EqualsAndHashCode.Exclude
-    String name;
+    private String name;
 
 }

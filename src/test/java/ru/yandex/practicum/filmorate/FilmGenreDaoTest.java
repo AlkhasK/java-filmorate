@@ -8,8 +8,9 @@ import ru.yandex.practicum.filmorate.storage.film.genre.FilmGenreStorage;
 import ru.yandex.practicum.filmorate.storage.film.genre.GenreStorage;
 
 import java.util.List;
+import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class FilmGenreDaoTest extends AbstractDaoTest {
 
@@ -21,36 +22,50 @@ public class FilmGenreDaoTest extends AbstractDaoTest {
 
     @Test
     @Sql("classpath:filmgenre/sql/data/create_data_for_film_genre.sql")
-    void createFilmGenreTest() {
+    void testCreateFilmGenreTest() {
         int filmId = 1;
-        Genre genreForTest = new Genre(1, "Comedy");
 
-        filmGenreStorage.create(filmId, genreForTest.getId());
+        filmGenreStorage.create(filmId, 1);
 
-        List<Genre> createdFilmGenre = genreStorage.findByFilmId(filmId);
-        assertEquals(List.of(genreForTest), createdFilmGenre);
+        assertThat(genreStorage.findByFilmId(filmId))
+                .hasSize(1)
+                .extracting(Genre::getId)
+                .containsExactlyInAnyOrder(1);
     }
 
     @Test
     @Sql("classpath:filmgenre/sql/data/create_data_for_film_genre_delete.sql")
-    void deleteByFilmIdFilmGenreTest() {
+    void testDeleteByFilmIdFilmGenreTest() {
         int filmId = 1;
 
         filmGenreStorage.delete(filmId);
 
-        List<Genre> filmGenre = genreStorage.findByFilmId(filmId);
-        assertEquals(0, filmGenre.size());
+        assertThat(genreStorage.findByFilmId(filmId)).hasSize(0);
     }
 
     @Test
     @Sql("classpath:filmgenre/sql/data/create_data_for_film_genre_delete.sql")
-    void deleteByIdFilmGenreTest() {
+    void testDeleteByIdFilmGenreTest() {
         int filmId = 1;
-        int genreId = 1;
 
-        filmGenreStorage.delete(filmId, genreId);
+        filmGenreStorage.delete(filmId, 1);
 
-        List<Genre> filmGenre = genreStorage.findByFilmId(filmId);
-        assertEquals(0, filmGenre.size());
+        assertThat(genreStorage.findByFilmId(filmId)).hasSize(0);
     }
+
+    @Test
+    @Sql("classpath:filmgenre/sql/data/create_data_for_film_genre.sql")
+    void testCreateBatch() {
+        int filmId = 1;
+        List<Map.Entry<Integer, Integer>> filmGenre = List.of(Map.entry(filmId, 1),
+                Map.entry(filmId, 2), Map.entry(filmId, 3));
+
+        filmGenreStorage.createBatch(filmGenre);
+
+        assertThat(genreStorage.findByFilmId(filmId))
+                .hasSize(3)
+                .extracting(Genre::getId)
+                .containsExactlyInAnyOrder(1, 2, 3);
+    }
+
 }

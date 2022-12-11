@@ -7,7 +7,7 @@ import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.controller.exception.EntityNotFoundException;
-import ru.yandex.practicum.filmorate.model.MPA;
+import ru.yandex.practicum.filmorate.model.Mpa;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -15,29 +15,29 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public class MPADbStorage implements MPAStorage {
+public class MpaDbStorage implements MpaStorage {
 
     private final JdbcTemplate jdbcTemplate;
 
     @Autowired
-    public MPADbStorage(JdbcTemplate jdbcTemplate) {
+    public MpaDbStorage(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
-    public List<MPA> findAll() {
+    public List<Mpa> findAll() {
         String sql = "select MPA_ID, MPA_NAME from MPA";
         return jdbcTemplate.query(sql, this::mapRowToMPA);
     }
 
-    private MPA mapRowToMPA(ResultSet rs, int rowNum) throws SQLException {
+    private Mpa mapRowToMPA(ResultSet rs, int rowNum) throws SQLException {
         Integer mpaId = rs.getInt("MPA_ID");
         String mpaName = rs.getString("MPA_NAME");
-        return new MPA(mpaId, mpaName);
+        return new Mpa(mpaId, mpaName);
     }
 
     @Override
-    public MPA create(MPA mpa) {
+    public Mpa create(Mpa mpa) {
         SqlParameterSource namedParameters = new MapSqlParameterSource()
                 .addValue("MPA_NAME", mpa.getName());
         SimpleJdbcInsert simpleJdbcInsert = new SimpleJdbcInsert(jdbcTemplate)
@@ -49,7 +49,7 @@ public class MPADbStorage implements MPAStorage {
     }
 
     @Override
-    public MPA update(MPA mpa) {
+    public Mpa update(Mpa mpa) {
         String sql = "update MPA set MPA_NAME = ? where MPA_ID = ?";
         int rowsAffected = jdbcTemplate.update(sql, mpa.getName(), mpa.getId());
         if (rowsAffected == 0) {
@@ -68,7 +68,7 @@ public class MPADbStorage implements MPAStorage {
     }
 
     @Override
-    public Optional<MPA> findById(int id) {
+    public Optional<Mpa> findById(int id) {
         String sql = "select MPA_ID, MPA_NAME from MPA where MPA_ID = ?";
         return jdbcTemplate.query(sql, this::mapRowToMPA, id).stream()
                 .findFirst();

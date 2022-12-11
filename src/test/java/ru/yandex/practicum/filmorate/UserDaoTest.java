@@ -1,6 +1,5 @@
 package ru.yandex.practicum.filmorate;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -9,11 +8,9 @@ import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class UserDaoTest extends AbstractDaoTest {
 
@@ -21,82 +18,84 @@ public class UserDaoTest extends AbstractDaoTest {
     @Qualifier("UserDbStorage")
     private UserStorage userStorage;
 
-    private User userForTest;
+    @Test
+    @Sql("classpath:user/sql/data/create_data_for_users.sql")
+    void testFindUserById() {
+        Optional<User> user = userStorage.findById(1);
+        assertThat(user).isPresent()
+                .hasValueSatisfying(u -> assertThat(u)
+                        .hasFieldOrPropertyWithValue("id", 1));
+    }
 
-    @BeforeEach
-    public void createUserForTest() {
+    @Test
+    void testCreateUser() {
         String userEmail = "some@email.ru";
         String userLogin = "login";
         String userName = "name";
         LocalDate userBirthday = LocalDate.now();
-        userForTest = User.builder()
+        User user = User.builder()
                 .email(userEmail)
                 .login(userLogin)
                 .name(userName)
                 .birthday(userBirthday).build();
-    }
-
-    @Test
-    void createUser() {
-        User user = userStorage.create(userForTest);
+        user = userStorage.create(user);
 
         Optional<User> createdUser = userStorage.findById(user.getId());
-        assertTrue(createdUser.isPresent());
-        assertEquals(user, createdUser.get());
+        assertThat(createdUser).isPresent()
+                .hasValue(user);
     }
 
     @Test
-    void updateUser() {
-        User user = userStorage.create(userForTest);
+    @Sql("classpath:user/sql/data/create_data_for_users.sql")
+    void testUpdateUser() {
+        User user = userStorage.findById(1).orElse(new User());
 
         user.setName("Updated name");
         userStorage.update(user);
 
-        Optional<User> updatedUser = userStorage.findById(user.getId());
-        assertTrue(updatedUser.isPresent());
-        assertEquals(user, updatedUser.get());
+        assertThat(userStorage.findById(1)).isPresent()
+                .hasValue(user);
     }
 
     @Test
-    void deleteUser() {
-        User user = userStorage.create(userForTest);
+    @Sql("classpath:user/sql/data/create_data_for_users.sql")
+    void testDeleteUser() {
+        userStorage.delete(1);
 
-        userStorage.delete(user.getId());
-
-        Optional<User> deletedUser = userStorage.findById(user.getId());
-        assertTrue(deletedUser.isEmpty());
+        assertThat(userStorage.findById(1)).isEmpty();
     }
 
     @Test
-    void findAllUser() {
-        User user = userStorage.create(userForTest);
-
-        List<User> users = userStorage.findAll();
-
-        assertEquals(List.of(user), users);
+    @Sql("classpath:user/sql/data/create_data_for_users.sql")
+    void testFindAllUser() {
+        assertThat(userStorage.findAll())
+                .hasSize(4)
+                .extracting(User::getId)
+                .containsExactlyInAnyOrder(1, 2, 3, 4);
     }
 
     @Test
-    @Sql("classpath:user/sql/data/create_data_for_user_friends.sql")
-    void findFriendsUser() {
+    @Sql({"classpath:user/sql/data/create_data_for_users.sql",
+            "classpath:user/sql/data/create_data_for_user_friends.sql"})
+    void testFindFriendsUser() {
+        User user = userStorage.findById(1).orElse(new User());
+
+        assertThat(userStorage.findFriends(user))
+                .hasSize(2)
+                .extracting(User::getId)
+                .containsExactlyInAnyOrder(2, 3);
+    }
+
+    @Test
+    @Sql({"classpath:user/sql/data/create_data_for_users.sql",
+            "classpath:user/sql/data/create_data_for_user_common_friends.sql"})
+    void testCommonFriendUser() {
         User user1 = userStorage.findById(1).orElse(new User());
         User user2 = userStorage.findById(2).orElse(new User());
-        User user3 = userStorage.findById(3).orElse(new User());
 
-        List<User> friends = userStorage.findFriends(user1);
-
-        assertEquals(List.of(user2, user3), friends);
-    }
-
-    @Test
-    @Sql("classpath:user/sql/data/create_data_for_user_common_friends.sql")
-    void commonFriendUser() {
-        User user1 = userStorage.findById(1).orElse(new User());
-        User user2 = userStorage.findById(2).orElse(new User());
-        User user3 = userStorage.findById(3).orElse(new User());
-
-        List<User> commonFriends = userStorage.commonFriends(user1, user2);
-
-        assertEquals(List.of(user3), commonFriends);
+        assertThat(userStorage.commonFriends(user1, user2))
+                .hasSize(1)
+                .extracting(User::getId)
+                .containsExactlyInAnyOrder(3);
     }
 }

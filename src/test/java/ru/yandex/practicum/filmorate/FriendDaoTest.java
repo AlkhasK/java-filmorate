@@ -1,6 +1,5 @@
 package ru.yandex.practicum.filmorate;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -10,8 +9,7 @@ import ru.yandex.practicum.filmorate.storage.user.friend.FriendStorage;
 
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 public class FriendDaoTest extends AbstractDaoTest {
 
@@ -19,58 +17,51 @@ public class FriendDaoTest extends AbstractDaoTest {
     @Qualifier("FriendDbStorage")
     private FriendStorage friendStorage;
 
-    private Friend friendForTest;
+    @Test
+    @Sql("classpath:friend/sql/data/create_data_for_friends.sql")
+    void testFindByIdFriend() {
+        Optional<Friend> friend = friendStorage.findById(1, 2);
 
-    @BeforeEach
-    public void createFriendForTest() {
-        friendForTest = new Friend(1, 2, false);
+        assertThat(friend)
+                .isPresent()
+                .hasValueSatisfying(f -> assertThat(f)
+                        .hasFieldOrPropertyWithValue("userId", 1)
+                        .hasFieldOrPropertyWithValue("friendId", 2)
+                );
     }
 
     @Test
     @Sql("classpath:friend/sql/data/create_data_for_friends.sql")
-    void createFriend() {
-        friendStorage.create(friendForTest);
+    void testCreateFriend() {
+        Friend friend = new Friend(3, 4, false);
+        friend = friendStorage.create(friend);
 
-        Optional<Friend> createdFriend = friendStorage
-                .findById(friendForTest.getUserId(), friendForTest.getFriendId());
-        assertTrue(createdFriend.isPresent());
-        assertEquals(friendForTest, createdFriend.get());
+        Optional<Friend> createdFriend = friendStorage.findById(3, 4);
+        assertThat(createdFriend)
+                .isPresent()
+                .hasValue(friend);
     }
 
     @Test
     @Sql("classpath:friend/sql/data/create_data_for_friends.sql")
-    void updateFriend() {
-        friendStorage.create(friendForTest);
+    void testUpdateFriend() {
+        Friend friend = friendStorage.findById(1, 2)
+                .orElse(new Friend());
 
-        friendForTest.setConfirmed(true);
-        friendStorage.update(friendForTest);
+        friend.setConfirmed(true);
+        friendStorage.update(friend);
 
-        Optional<Friend> updatedFriend = friendStorage
-                .findById(friendForTest.getUserId(), friendForTest.getFriendId());
-        assertTrue(updatedFriend.isPresent());
-        assertEquals(friendForTest, updatedFriend.get());
+        assertThat(friendStorage.findById(1, 2))
+                .isPresent()
+                .hasValue(friend);
     }
 
     @Test
     @Sql("classpath:friend/sql/data/create_data_for_friends.sql")
-    void deleteFriend() {
-        friendStorage.create(friendForTest);
+    void testDeleteFriend() {
+        friendStorage.delete(1, 2);
 
-        friendStorage.delete(friendForTest.getUserId(), friendForTest.getFriendId());
-
-        Optional<Friend> deletedFriend = friendStorage
-                .findById(friendForTest.getUserId(), friendForTest.getFriendId());
-        assertTrue(deletedFriend.isEmpty());
-    }
-
-    @Test
-    @Sql("classpath:friend/sql/data/create_data_for_friends.sql")
-    void findByIdFriend() {
-        friendStorage.create(friendForTest);
-
-        Optional<Friend> createdFriend = friendStorage
-                .findById(friendForTest.getUserId(), friendForTest.getFriendId());
-        assertTrue(createdFriend.isPresent());
-        assertEquals(friendForTest, createdFriend.get());
+        assertThat(friendStorage.findById(1, 2))
+                .isEmpty();
     }
 }

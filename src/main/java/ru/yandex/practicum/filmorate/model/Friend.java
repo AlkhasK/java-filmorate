@@ -12,11 +12,11 @@ import javax.validation.constraints.NotNull;
 public class Friend {
 
     @NotNull
-    Integer userId;
+    private Integer userId;
     @NotNull
-    Integer friendId;
+    private Integer friendId;
     @NotNull
     @EqualsAndHashCode.Exclude
-    Boolean confirmed;
+    private Boolean confirmed;
 
 }

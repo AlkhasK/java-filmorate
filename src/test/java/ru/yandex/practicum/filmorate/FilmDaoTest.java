@@ -1,13 +1,13 @@
 package ru.yandex.practicum.filmorate;
 
-import org.junit.jupiter.api.BeforeEach;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.test.context.jdbc.Sql;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
-import ru.yandex.practicum.filmorate.model.MPA;
+import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
 import java.time.Duration;
@@ -15,8 +15,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class FilmDaoTest extends AbstractDaoTest {
 
@@ -24,80 +23,80 @@ public class FilmDaoTest extends AbstractDaoTest {
     @Qualifier("FilmDbStorage")
     private FilmStorage filmStorage;
 
-    private Film filmForTest;
+    @Test
+    @Sql("classpath:film/sql/data/create_data_for_films.sql")
+    void testFindFilmById() {
+        Optional<Film> film = filmStorage.findById(1);
 
-    @BeforeEach
-    public void createFilmForTest() {
+        assertThat(film)
+                .isPresent()
+                .hasValueSatisfying(f -> assertThat(f)
+                        .hasFieldOrPropertyWithValue("id", 1));
+    }
+
+    @Test
+    void testCreateFilm() {
         String name = "Some name";
         String descr = "Very good description";
         LocalDate releaseDate = LocalDate.now();
         Duration duration = Duration.ofSeconds(7200);
-        MPA mpa = new MPA(1, "A");
-        List<Genre> genres = List.of(new Genre(1, "Comedy"));
-        filmForTest = Film.builder()
+        Mpa mpa = new Mpa(1, "G");
+        List<Genre> genres = List.of(new Genre(1, "Комедия"));
+        Film film = Film.builder()
                 .name(name)
                 .description(descr)
                 .releaseDate(releaseDate)
                 .duration(duration)
                 .genres(genres)
                 .mpa(mpa).build();
+
+        film = filmStorage.create(film);
+
+        Optional<Film> createdFilm = filmStorage.findById(1);
+        assertThat(createdFilm)
+                .isPresent()
+                .hasValue(film);
     }
 
     @Test
-    void createFilm() {
-        Film film = filmStorage.create(filmForTest);
-
-        Optional<Film> createdFilm = filmStorage.findById(filmForTest.getId());
-        assertTrue(createdFilm.isPresent());
-        assertEquals(film, createdFilm.get());
-    }
-
-    @Test
-    void updateFilm() {
-        Film film = filmStorage.create(filmForTest);
+    @Sql("classpath:film/sql/data/create_data_for_films.sql")
+    void testUpdateFilm() {
+        Film film = filmStorage.findById(1).orElse(new Film());
 
         film.setName("Updated name");
         filmStorage.update(film);
 
-        Optional<Film> updatedFilm = filmStorage.findById(filmForTest.getId());
-        assertTrue(updatedFilm.isPresent());
-        assertEquals(film, updatedFilm.get());
+        assertThat(filmStorage.findById(1))
+                .isPresent()
+                .hasValue(film);
     }
 
     @Test
-    void getFilmById() {
-        Film film = filmStorage.create(filmForTest);
+    @Sql("classpath:film/sql/data/create_data_for_films.sql")
+    void testDeleteFilm() {
+        filmStorage.delete(1);
 
-        Optional<Film> createdFilm = filmStorage.findById(filmForTest.getId());
-
-        assertTrue(createdFilm.isPresent());
-        assertEquals(film, createdFilm.get());
+        assertThat(filmStorage.findById(1)).isEmpty();
     }
 
     @Test
-    void deleteFilm() {
-        filmStorage.create(filmForTest);
-
-        filmStorage.delete(filmForTest.getId());
-
-        assertTrue(filmStorage.findById(filmForTest.getId()).isEmpty());
+    @Sql("classpath:film/sql/data/create_data_for_films.sql")
+    void testFindAllFilms() {
+        Assertions.assertThat(filmStorage.findAll())
+                .hasSize(3)
+                .extracting(Film::getId)
+                .containsExactlyInAnyOrder(1, 2, 3);
     }
 
     @Test
-    void findAllFilms() {
-        Film film = filmStorage.create(filmForTest);
-
-        assertEquals(List.of(film), filmStorage.findAll());
-    }
-
-    @Test
-    @Sql("classpath:film/sql/data/create_data_for_popular_films.sql")
-    void getPopularFilm() {
+    @Sql({"classpath:film/sql/data/create_data_for_films.sql",
+            "classpath:film/sql/data/create_data_for_popular_films.sql"})
+    void testPopularFilm() {
         int expectedFilmListSize = 3;
-        Film film1 = filmStorage.findById(1).orElse(new Film());
-        Film film2 = filmStorage.findById(2).orElse(new Film());
-        Film film3 = filmStorage.findById(3).orElse(new Film());
 
-        assertEquals(List.of(film3, film2, film1), filmStorage.popularFilms(expectedFilmListSize));
+        assertThat(filmStorage.popularFilms(expectedFilmListSize))
+                .hasSize(expectedFilmListSize)
+                .extracting(Film::getId)
+                .containsExactly(3, 2, 1);
     }
 }

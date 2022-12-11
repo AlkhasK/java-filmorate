@@ -8,7 +8,6 @@ import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.Like;
 import ru.yandex.practicum.filmorate.service.validate.ValidateFilmService;
-import ru.yandex.practicum.filmorate.service.validate.ValidateUserService;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.film.like.LikeStorage;
 
@@ -25,16 +24,13 @@ public class FilmService {
 
     private final ValidateFilmService validateFilmService;
 
-    private final ValidateUserService validateUserService;
-
     @Autowired
     public FilmService(@Qualifier("FilmDbStorage") FilmStorage filmStorage,
                        @Qualifier("LikeDbStorage") LikeStorage likeStorage,
-                       ValidateFilmService validateFilmService, ValidateUserService validateUserService) {
+                       ValidateFilmService validateFilmService) {
         this.filmStorage = filmStorage;
         this.likeStorage = likeStorage;
         this.validateFilmService = validateFilmService;
-        this.validateUserService = validateUserService;
     }
 
     public List<Film> findAll() {
@@ -63,30 +59,21 @@ public class FilmService {
 
     public Film getFilm(int filmId) {
         Optional<Film> film = filmStorage.findById(filmId);
-        if (film.isEmpty()) {
-            throw new EntityNotFoundException("No film entity with id: " + filmId);
-        }
-        return film.get();
+        return film.orElseThrow(() -> new EntityNotFoundException("No film entity with id: " + filmId));
     }
 
     public void addLike(int filmId, int userId) {
-        if (!validateFilmService.isEntityExists(filmId)) {
-            throw new EntityNotFoundException("No film entity with id: " + filmId);
-        }
-        if (!validateUserService.isEntityExists(userId)) {
-            throw new EntityNotFoundException("No user entity with id: " + userId);
-        }
+//        filmStorage.findById(filmId).orElseThrow(() -> new EntityNotFoundException("No film entity with id: " + filmId));
+//        userStorage.findById(userId).orElseThrow(() -> new EntityNotFoundException("No user entity with id: " + userId));
         Like like = new Like(filmId, userId);
         likeStorage.create(like);
     }
 
     public void deleteLike(int filmId, int userId) {
-        Optional<Like> like = likeStorage.findById(filmId, userId);
-        if (like.isEmpty()) {
-            throw new EntityNotFoundException(String.format("No like entity with filmId : %s and userId : %s",
-                    filmId, userId));
-        }
-        likeStorage.delete(like.get());
+        Like like = likeStorage.findById(filmId, userId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        String.format("No like entity with filmId : %s and userId : %s", filmId, userId)));
+        likeStorage.delete(like);
     }
 
     public List<Film> getPopularFilms(int count) {

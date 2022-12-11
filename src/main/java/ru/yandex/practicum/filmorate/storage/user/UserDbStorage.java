@@ -2,10 +2,11 @@ package ru.yandex.practicum.filmorate.storage.user;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
-import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.controller.exception.EntityNotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
@@ -20,34 +21,40 @@ import java.util.Optional;
 @Qualifier("UserDbStorage")
 public class UserDbStorage implements UserStorage {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final NamedParameterJdbcTemplate jdbcTemplate;
 
     @Autowired
-    public UserDbStorage(JdbcTemplate jdbcTemplate) {
+    public UserDbStorage(NamedParameterJdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
     public User create(User user) {
+        String sql = "insert into USERS (USER_EMAIL, USER_LOGIN, USER_NAME, USER_BIRTHDAY) " +
+                "values (:userEmail, :userLogin, :userName, :userBirthday)";
         SqlParameterSource namedParameters = new MapSqlParameterSource()
-                .addValue("USER_EMAIL", user.getEmail())
-                .addValue("USER_LOGIN", user.getLogin())
-                .addValue("USER_NAME", user.getName())
-                .addValue("USER_BIRTHDAY", user.getBirthday());
-        SimpleJdbcInsert simpleJdbcInsert = new SimpleJdbcInsert(jdbcTemplate)
-                .withTableName("USERS")
-                .usingGeneratedKeyColumns("USER_ID");
-        int userId = simpleJdbcInsert.executeAndReturnKey(namedParameters).intValue();
+                .addValue("userEmail", user.getEmail())
+                .addValue("userLogin", user.getLogin())
+                .addValue("userName", user.getName())
+                .addValue("userBirthday", user.getBirthday());
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(sql, namedParameters, keyHolder, new String[]{"USER_ID"});
+        int userId = keyHolder.getKey().intValue();
         user.setId(userId);
         return user;
     }
 
     @Override
     public User update(User user) {
-        String sql = "update USERS set USER_EMAIL = ?, USER_LOGIN = ?, USER_NAME = ?, " +
-                "USER_BIRTHDAY = ? where USER_ID = ?";
-        int rowsAffected = jdbcTemplate.update(sql, user.getEmail(), user.getLogin(), user.getName(),
-                user.getBirthday(), user.getId());
+        MapSqlParameterSource parameterSource = new MapSqlParameterSource()
+                .addValue("userEmail", user.getEmail())
+                .addValue("userLogin", user.getLogin())
+                .addValue("userName", user.getName())
+                .addValue("userBirthday", user.getBirthday())
+                .addValue("userId", user.getId());
+        String sql = "update USERS set USER_EMAIL = :userEmail, USER_LOGIN = :userLogin, USER_NAME = :userName, " +
+                "USER_BIRTHDAY = :userBirthday where USER_ID = :userId";
+        int rowsAffected = jdbcTemplate.update(sql, parameterSource);
         if (rowsAffected == 0) {
             throw new EntityNotFoundException("No entry user with id : " + user.getId());
         }
@@ -56,8 +63,8 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public void delete(int id) {
-        String sql = "delete from USERS where USER_ID = ?";
-        int rowsAffected = jdbcTemplate.update(sql, id);
+        String sql = "delete from USERS where USER_ID = :userId";
+        int rowsAffected = jdbcTemplate.update(sql, new MapSqlParameterSource().addValue("userId", id));
         if (rowsAffected == 0) {
             throw new EntityNotFoundException("No entry user with id : " + id);
         }
@@ -72,23 +79,21 @@ public class UserDbStorage implements UserStorage {
     @Override
     public Optional<User> findById(int id) {
         String sql = "select USER_ID, USER_EMAIL, USER_LOGIN, USER_NAME, USER_BIRTHDAY " +
-                "from USERS where USER_ID = ?";
-        return jdbcTemplate.query(sql, this::mapRowToUser, id).stream().findFirst();
+                "from USERS where USER_ID = :userId";
+        return jdbcTemplate.query(sql, new MapSqlParameterSource().addValue("userId", id), this::mapRowToUser).stream().findFirst();
     }
 
     @Override
     public List<User> findFriends(User user) {
         String sql = "select u.USER_ID, u.USER_EMAIL, u.USER_LOGIN, u.USER_NAME, u.USER_BIRTHDAY " +
-                "from USERS u " +
-                "where u.USER_ID in (" +
-                "select f1.FRIEND_ID " +
-                "from FRIENDS f1 " +
-                "where f1.USER_ID = ? " +
+                "from FRIENDS f, USERS u " +
+                "where f.USER_ID = :userId and f.FRIEND_ID = u.USER_ID " +
                 "union " +
-                "select f2.USER_ID " +
-                "from FRIENDS f2 " +
-                "where f2.FRIEND_ID = ? and f2.IS_CONFIRMED = true)";
-        return jdbcTemplate.query(sql, this::mapRowToUser, user.getId(), user.getId());
+                "select u.USER_ID, u.USER_EMAIL, u.USER_LOGIN, u.USER_NAME, u.USER_BIRTHDAY " +
+                "from FRIENDS f, USERS u " +
+                "where f.FRIEND_ID = :userId and f.IS_CONFIRMED = true and f.USER_ID = u.USER_ID";
+        return jdbcTemplate.query(sql, new MapSqlParameterSource().addValue("userId", user.getId()),
+                this::mapRowToUser);
     }
 
     private User mapRowToUser(ResultSet rs, int rowNum) throws SQLException {
@@ -101,12 +106,22 @@ public class UserDbStorage implements UserStorage {
     }
 
     public List<User> commonFriends(User user1, User user2) {
-        String sql = "select distinct u.USER_ID, u.USER_EMAIL, u.USER_LOGIN, u.USER_NAME, u.USER_BIRTHDAY" +
-                " from USERS u " +
-                "where u.USER_ID in ((select FRIEND_ID from FRIENDS where USER_ID = ? union select USER_ID " +
-                "from FRIENDS where FRIEND_ID = ? and IS_CONFIRMED = true) " +
-                "intersect (select FRIEND_ID from FRIENDS where USER_ID = ? union select USER_ID " +
-                "from FRIENDS where FRIEND_ID = ? and IS_CONFIRMED = true))";
-        return jdbcTemplate.query(sql, this::mapRowToUser, user1.getId(), user1.getId(), user2.getId(), user2.getId());
+        MapSqlParameterSource parameterSource = new MapSqlParameterSource()
+                .addValue("userId1", user1.getId())
+                .addValue("userId2", user2.getId());
+        String sql = "select u.USER_ID, u.USER_EMAIL, u.USER_LOGIN, u.USER_NAME, u.USER_BIRTHDAY " +
+                "from FRIENDS f1, FRIENDS f2, USERS u " +
+                "where (f1.USER_ID = :userId1 and f2.USER_ID = :userId2 and f1.FRIEND_ID = f2.FRIEND_ID " +
+                "and f1.FRIEND_ID = u.USER_ID) " +
+                "or (f1.USER_ID = :userId1 and (f2.FRIEND_ID = :userId2 and f2.IS_CONFIRMED = true) " +
+                "and f1.FRIEND_ID = f2.USER_ID and f1.FRIEND_ID = u.USER_ID) " +
+                "union " +
+                "select u.USER_ID, u.USER_EMAIL, u.USER_LOGIN, u.USER_NAME, u.USER_BIRTHDAY " +
+                "from FRIENDS f1, FRIENDS f2, USERS u " +
+                "where ((f1.FRIEND_ID = :userId1 and f1.IS_CONFIRMED = true) and (f2.FRIEND_ID = :userId2 " +
+                "and f2.IS_CONFIRMED = true) and f1.USER_ID = f2.USER_ID and f1.USER_ID = u.USER_ID) " +
+                "or (((f1.FRIEND_ID = :userId1 and f1.IS_CONFIRMED = true) and f2.USER_ID = :userId2 " +
+                "and f1.USER_ID = f2.FRIEND_ID) and f1.USER_ID = u.USER_ID)";
+        return jdbcTemplate.query(sql, parameterSource, this::mapRowToUser);
     }
 }

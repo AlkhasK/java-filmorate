@@ -1,6 +1,5 @@
 package ru.yandex.practicum.filmorate;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -8,11 +7,9 @@ import org.springframework.test.context.jdbc.Sql;
 import ru.yandex.practicum.filmorate.model.Like;
 import ru.yandex.practicum.filmorate.storage.film.like.LikeStorage;
 
-import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class LikeDaoTest extends AbstractDaoTest {
 
@@ -20,48 +17,55 @@ public class LikeDaoTest extends AbstractDaoTest {
     @Qualifier("LikeDbStorage")
     private LikeStorage likeStorage;
 
-    private Like likeForTest;
+    @Test
+    @Sql("classpath:like/sql/data/create_data_for_likes.sql")
+    void testFindByIdLike() {
+        Optional<Like> like = likeStorage.findById(2, 1);
 
-    @BeforeEach
-    public void createLikeForTest() {
-        likeForTest = new Like(1, 1);
+        assertThat(like).isPresent().hasValueSatisfying(l -> assertThat(l)
+                .hasFieldOrPropertyWithValue("filmId", 2)
+                .hasFieldOrPropertyWithValue("userId", 1)
+        );
     }
 
     @Test
     @Sql("classpath:like/sql/data/create_data_for_likes.sql")
-    void createLike() {
-        likeStorage.create(likeForTest);
+    void testCreateLike() {
+        Like like = new Like(1, 1);
 
-        Optional<Like> createdLike = likeStorage.findById(likeForTest.getFilmId(), likeForTest.getUserId());
-        assertTrue(createdLike.isPresent());
-        assertEquals(likeForTest, createdLike.get());
+        likeStorage.create(like);
+
+        Optional<Like> createdLike = likeStorage.findById(1, 1);
+        assertThat(createdLike)
+                .isPresent()
+                .hasValue(like);
     }
 
     @Test
     @Sql("classpath:like/sql/data/create_data_for_likes.sql")
-    void deleteLike() {
-        likeStorage.create(likeForTest);
-        likeStorage.delete(likeForTest);
+    void testDeleteLike() {
+        Like likeForDelete = new Like(2, 1);
 
-        Optional<Like> deletedLike = likeStorage.findById(likeForTest.getFilmId(), likeForTest.getUserId());
-        assertTrue(deletedLike.isEmpty());
+        likeStorage.delete(likeForDelete);
+
+        assertThat(likeStorage.findById(2, 1)).isEmpty();
     }
 
     @Test
     @Sql("classpath:like/sql/data/create_data_for_likes.sql")
-    void findByFilmIdLikes() {
+    void testFindByFilmIdLikes() {
         Like like1 = new Like(2, 1);
         Like like2 = new Like(2, 2);
         Like like3 = new Like(2, 3);
 
-        List<Like> likes = likeStorage.findByFilmId(like1.getFilmId());
-
-        assertEquals(List.of(like1, like2, like3), likes);
+        assertThat(likeStorage.findByFilmId(2))
+                .hasSize(3)
+                .containsExactlyInAnyOrder(like1, like2, like3);
     }
 
     @Test
     @Sql("classpath:like/sql/data/create_data_for_likes.sql")
-    void findAllLikes() {
+    void testFindAllLikes() {
         Like like1 = new Like(2, 1);
         Like like2 = new Like(2, 2);
         Like like3 = new Like(2, 3);
@@ -69,19 +73,9 @@ public class LikeDaoTest extends AbstractDaoTest {
         Like like5 = new Like(3, 2);
         Like like6 = new Like(3, 3);
 
-        List<Like> likes = likeStorage.findAll();
-
-        assertEquals(List.of(like1, like2, like3, like4, like5, like6), likes);
+        assertThat(likeStorage.findAll())
+                .hasSize(6)
+                .containsExactlyInAnyOrder(like1, like2, like3, like4, like5, like6);
     }
 
-    @Test
-    @Sql("classpath:like/sql/data/create_data_for_likes.sql")
-    void findByIdLike() {
-        Like likeExp = new Like(2, 1);
-
-        Optional<Like> like = likeStorage.findById(likeExp.getFilmId(), likeExp.getUserId());
-
-        assertTrue(like.isPresent());
-        assertEquals(likeExp, like.get());
-    }
 }

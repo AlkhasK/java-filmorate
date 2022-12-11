@@ -31,5 +31,5 @@ public class Film {
     @JsonSerialize(using = DurationSerializer.class)
     private Duration duration;
     private List<Genre> genres;
-    private MPA mpa;
+    private Mpa mpa;
 }
