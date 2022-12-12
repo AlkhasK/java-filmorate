@@ -63,8 +63,6 @@ public class FilmService {
     }
 
     public void addLike(int filmId, int userId) {
-//        filmStorage.findById(filmId).orElseThrow(() -> new EntityNotFoundException("No film entity with id: " + filmId));
-//        userStorage.findById(userId).orElseThrow(() -> new EntityNotFoundException("No user entity with id: " + userId));
         Like like = new Like(filmId, userId);
         likeStorage.create(like);
     }
