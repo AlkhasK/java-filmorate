@@ -8,7 +8,7 @@ import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.film.FilmService;
 import ru.yandex.practicum.filmorate.service.validate.ValidateFilmService;
 import ru.yandex.practicum.filmorate.storage.film.InMemoryFilmStorage;
-import ru.yandex.practicum.filmorate.storage.film.like.InMemoryLikeStorage;
+import ru.yandex.practicum.filmorate.storage.film.like.LikeStorage;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
@@ -28,9 +28,9 @@ public class FilmValidationTest {
     @BeforeEach
     public void initFilmController() {
         var inMemoryFilmStorage = new InMemoryFilmStorage();
-        var inMemoryLikeStorage = new InMemoryLikeStorage();
+        LikeStorage likeStorage = null;
         var validateFilmService = new ValidateFilmService(inMemoryFilmStorage);
-        var filmService = new FilmService(inMemoryFilmStorage, inMemoryLikeStorage, validateFilmService);
+        var filmService = new FilmService(inMemoryFilmStorage, likeStorage, validateFilmService);
         filmController = new FilmController(filmService);
     }
 

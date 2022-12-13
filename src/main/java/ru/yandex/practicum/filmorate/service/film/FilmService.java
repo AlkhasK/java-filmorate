@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.controller.exception.EntityNotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
-import ru.yandex.practicum.filmorate.model.Like;
 import ru.yandex.practicum.filmorate.service.validate.ValidateFilmService;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.film.like.LikeStorage;
@@ -63,15 +62,11 @@ public class FilmService {
     }
 
     public void addLike(int filmId, int userId) {
-        Like like = new Like(filmId, userId);
-        likeStorage.create(like);
+        likeStorage.create(filmId, userId);
     }
 
     public void deleteLike(int filmId, int userId) {
-        Like like = likeStorage.findById(filmId, userId)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        String.format("No like entity with filmId : %s and userId : %s", filmId, userId)));
-        likeStorage.delete(like);
+        likeStorage.delete(filmId, userId);
     }
 
     public List<Film> getPopularFilms(int count) {

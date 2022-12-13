@@ -5,12 +5,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.controller.exception.EntityNotFoundException;
-import ru.yandex.practicum.filmorate.model.Like;
-
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.List;
-import java.util.Optional;
 
 @Repository
 @Qualifier("LikeDbStorage")
@@ -24,45 +18,19 @@ public class LikeDbStorage implements LikeStorage {
     }
 
     @Override
-    public Like create(Like like) {
+    public void create(int filmId, int userId) {
         String sql = "insert into LIKES (FILM_ID, USER_ID) values(?, ?)";
-        jdbcTemplate.update(sql, like.getFilmId(), like.getUserId());
-        return like;
+        jdbcTemplate.update(sql, filmId, userId);
     }
 
     @Override
-    public void delete(Like like) {
+    public void delete(int filmId, int userId) {
         String sql = "delete from LIKES where FILM_ID = ? and USER_ID = ?";
-        int rowsAffected = jdbcTemplate.update(sql, like.getFilmId(), like.getUserId());
+        int rowsAffected = jdbcTemplate.update(sql, filmId, userId);
         if (rowsAffected == 0) {
             throw new EntityNotFoundException(String.format("No entity like with film id: %s and user id : %s",
-                    like.getFilmId(), like.getUserId()));
+                    filmId, userId));
         }
-    }
-
-    @Override
-    public List<Like> findByFilmId(int filmId) {
-        String sql = "select FILM_ID, USER_ID from LIKES where FILM_ID = ?";
-        return jdbcTemplate.query(sql, this::mapRowToLike, filmId);
-    }
-
-    private Like mapRowToLike(ResultSet rs, int rowNum) throws SQLException {
-        Integer filmId = rs.getInt("FILM_ID");
-        Integer userId = rs.getInt("USER_ID");
-        return new Like(filmId, userId);
-    }
-
-    @Override
-    public List<Like> findAll() {
-        String sql = "select FILM_ID, USER_ID from LIKES";
-        return jdbcTemplate.query(sql, this::mapRowToLike);
-    }
-
-    @Override
-    public Optional<Like> findById(Integer filmId, Integer userId) {
-        String sql = "select FILM_ID, USER_ID from LIKES where FILM_ID = ? and USER_ID = ?";
-        return jdbcTemplate.query(sql, this::mapRowToLike, filmId, userId).stream()
-                .findFirst();
     }
 
 }
