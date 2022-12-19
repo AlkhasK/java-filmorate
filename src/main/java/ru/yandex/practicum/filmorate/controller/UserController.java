@@ -1,63 +1,63 @@
 package ru.yandex.practicum.filmorate.controller;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.controller.exception.EntityNotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.service.user.UserService;
 
 import javax.validation.Valid;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/users")
 public class UserController {
 
-    private int id = 1;
-
-    private final Map<Integer, User> users = new HashMap<>();
+    private final UserService userService;
 
     @GetMapping
     public List<User> findAll() {
-        return new ArrayList<>(users.values());
+        return userService.findAll();
     }
 
     @PutMapping
     public User update(@Valid @RequestBody User user) {
-        log.info("Update film : {}", user);
-        validateForUpdate(user);
-        setNameIfEmpty(user);
-        users.put(user.getId(), user);
-        return user;
+        log.info("PUT: update user : {}", user);
+        return userService.update(user);
     }
 
     @PostMapping
     public User create(@Valid @RequestBody User user) {
-        log.info("Create film : {}", user);
-        setNameIfEmpty(user);
-        user.setId(id++);
-        users.put(user.getId(), user);
-        return user;
+        log.info("POST: create user : {}", user);
+        return userService.create(user);
     }
 
-    private boolean isEntityExists(User user) {
-        return users.containsKey(user.getId());
+    @GetMapping("/{id}")
+    public User find(@PathVariable int id) {
+        return userService.getUser(id);
     }
 
-    private void validateForUpdate(User user) {
-        if (!isEntityExists(user)) {
-            log.warn("User with id: {} doesn't exists", user.getId());
-            throw new EntityNotFoundException("No user entity with id: " + user.getId());
-        }
+    @PutMapping("/{id}/friends/{friendId}")
+    public void addFriend(@PathVariable int id, @PathVariable int friendId) {
+        log.info("PUT: add friend id : {} to user id {}", friendId, id);
+        userService.addFriend(id, friendId);
     }
 
-    private void setNameIfEmpty(User user) {
-        if (user.getName() == null || user.getName().isEmpty()) {
-            String login = user.getLogin();
-            user.setName(login);
-        }
+    @DeleteMapping("/{id}/friends/{friendId}")
+    public void deleteFriend(@PathVariable int id, @PathVariable int friendId) {
+        log.info("DELETE: remove friend id : {} from user id {}", friendId, id);
+        userService.deleteFriend(id, friendId);
+    }
+
+    @GetMapping("/{id}/friends")
+    public List<User> getFriends(@PathVariable int id) {
+        return userService.getFriends(id);
+    }
+
+    @GetMapping("/{id}/friends/common/{otherId}")
+    public List<User> getCommonFriends(@PathVariable int id, @PathVariable int otherId) {
+        return userService.getCommonFriends(id, otherId);
     }
 }

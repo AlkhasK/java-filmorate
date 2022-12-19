@@ -1,9 +1,7 @@
 package ru.yandex.practicum.filmorate.model;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import ru.yandex.practicum.filmorate.model.serializer.DurationSerializer;
 
 import javax.validation.constraints.NotBlank;
@@ -11,10 +9,14 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.List;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
+@Builder
 @AllArgsConstructor
+@EqualsAndHashCode
 public class Film {
 
     private Integer id;
@@ -28,4 +30,6 @@ public class Film {
     @NotNull
     @JsonSerialize(using = DurationSerializer.class)
     private Duration duration;
+    private List<Genre> genres;
+    private Mpa mpa;
 }
